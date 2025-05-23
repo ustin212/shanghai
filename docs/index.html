@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>旅行规划表 - 上海一日游</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* A4 Page dimensions: 210mm x 297mm. Margins: 10mm each side. Printable area: 190mm x 277mm */
+        /* Tailwind uses rem, 1rem = 16px. 1mm approx 3.78px. */
+        /* 210mm = 793.8px, 297mm = 1122.6px */
+        /* 190mm = 718.2px, 277mm = 1047.06px */
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif; /* Added Noto Sans SC for better Chinese char display */
+            background-color: #f0f2f5; /* Light gray background for the page outside A4 */
+            color: #333;
+        }
+        .a4-page-container {
+            width: 210mm;
+            min-height: 297mm; /* Use min-height to allow content to flow to multiple pages */
+            margin: 20px auto;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 10mm; /* Print margins */
+            box-sizing: border-box;
+            position: relative; /* For optional cut lines */
+        }
+
+        .print-button-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .animate-on-scroll.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Optional dashed cut lines */
+        .cut-lines::before, .cut-lines::after {
+            content: '';
+            position: absolute;
+            border-style: dashed;
+            border-color: #ccc;
+            z-index: -1; /* Behind content */
+        }
+        /* Horizontal cut lines */
+        .cut-lines::before { 
+            top: 5mm; bottom: 5mm; left: 5mm; right: 5mm; 
+            border-width: 1px 0;
+        }
+        /* Vertical cut lines */
+        .cut-lines::after {
+            top: 5mm; bottom: 5mm; left: 5mm; right: 5mm;
+            border-width: 0 1px;
+        }
+
+        /* Print specific styles */
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+                -webkit-print-color-adjust: exact; /* Chrome, Safari */
+                color-adjust: exact; /* Firefox */
+            }
+            .a4-page-container {
+                width: 100%;
+                min-height: initial; /* Let content flow naturally */
+                margin: 0;
+                box-shadow: none;
+                padding: 0; /* Margins handled by @page */
+                /* page-break-inside: avoid; */ /* Avoid breaking the container itself if it's small */
+            }
+            .print-button-container {
+                display: none !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .section-card {
+                page-break-inside: avoid; /* Try to keep sections on one page */
+                box-shadow: none !important;
+                border: 1px solid #eee; /* Add subtle border for print */
+            }
+            h1, h2, h3 {
+                color: black !important; /* Ensure headings are black for print */
+            }
+            table {
+                width: 100% !important; /* Ensure tables use full width */
+            }
+            th, td {
+                border: 1px solid #ddd !important; /* Ensure table borders are visible */
+            }
+            /* Ensure chart is visible in print */
+            canvas {
+                 max-width: 100% !important;
+                 height: auto !important;
+            }
+             /* Handle page breaks for larger content */
+            .page-break-before { page-break-before: always; }
+            .page-break-after { page-break-after: always; }
+        }
+        @page {
+            size: A4;
+            margin: 10mm; /* Printer margins */
+        }
+    </style>
+</head>
+<body>
+    <div class="print-button-container no-print">
+        <button id="printBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out">
+            <i class="fas fa-print mr-2"></i>打印规划表
+        </button>
+    </div>
+
+    <div class="a4-page-container"> <header class="mb-6 pb-4 border-b border-gray-300 animate-on-scroll">
+            <h1 class="text-4xl font-bold text-center text-blue-600 mb-2"><i class="fas fa-map-signs mr-3 text-yellow-500"></i>上海一日游</h1>
+            <div class="text-center text-gray-600">
+                <p><i class="fas fa-calendar-alt mr-2"></i><strong>日期:</strong> 2025年7月X日 (星期X) (请根据实际情况修改)</p>
+                <p><i class="fas fa-cloud-sun mr-2"></i><strong>天气预估:</strong> 多云转晴, 28°C - 35°C (请提前查询实际天气)</p>
+                <p><i class="fas fa-users mr-2"></i><strong>同行人:</strong> 您和您的朋友</p>
+            </div>
+        </header>
+
+        <section class="mb-6 section-card bg-gray-50 p-4 rounded-lg shadow animate-on-scroll">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-3"><i class="fas fa-stream mr-2 text-indigo-500"></i>行程概览</h2>
+            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                <li><i class="fas fa-train-subway mr-1 text-green-500"></i> 上午/中午: 深圳北站 <i class="fas fa-arrow-right mx-1"></i> 上海虹桥站</li>
+                <li><i class="fas fa-coffee mr-1 text-orange-500"></i> 下午: 人民咖啡馆</li>
+                <li><i class="fas fa-palette mr-1 text-purple-500"></i> 下午: 上海当代艺术博物馆</li>
+                <li><i class="fas fa-utensils mr-1 text-red-500"></i> 傍晚: 晚餐 (光明邨大酒家或其他)</li>
+                <li><i class="fas fa-mug-hot mr-1 text-teal-500"></i> 傍晚: 看得到风景的咖啡馆</li>
+                <li><i class="fas fa-train-subway mr-1 text-green-500"></i> 晚上: 上海虹桥站 <i class="fas fa-arrow-right mx-1"></i> 深圳北站 (次日抵达)</li>
+            </ul>
+        </section>
+
+        <section class="mb-6 section-card bg-white p-4 rounded-lg shadow animate-on-scroll">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4"><i class="fas fa-clock mr-2 text-cyan-500"></i>详细时间表</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">活动</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">地点</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">详情/备注</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">07:59 (预估)</td>
+                            <td class="px-4 py-3"><i class="fas fa-train mr-1 text-green-600"></i> 乘坐高铁 G100</td>
+                            <td class="px-4 py-3">深圳北站 <i class="fas fa-arrow-right mx-1"></i> 上海虹桥站</td>
+                            <td class="px-4 py-3">约7小时44分</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">15:43 (预估)</td>
+                            <td class="px-4 py-3"><i class="fas fa-shoe-prints mr-1 text-blue-500"></i> 抵达上海虹桥</td>
+                            <td class="px-4 py-3">上海虹桥站</td>
+                            <td class="px-4 py-3">准备市内交通</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">15:43 - 16:30</td>
+                            <td class="px-4 py-3"><i class="fas fa-subway mr-1 text-yellow-600"></i> 地铁2号线</td>
+                            <td class="px-4 py-3">虹桥火车站 <i class="fas fa-arrow-right mx-1"></i> 人民广场站</td>
+                            <td class="px-4 py-3">约40分钟, 票价约5元</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">16:30 - 17:30</td>
+                            <td class="px-4 py-3"><i class="fas fa-coffee mr-1 text-orange-600"></i> 咖啡时光</td>
+                            <td class="px-4 py-3">人民咖啡馆 (光复路9号)</td>
+                            <td class="px-4 py-3">步行/地铁8号线曲阜路站 (约15分钟), 复古氛围</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">17:30 - 18:30</td>
+                            <td class="px-4 py-3"><i class="fas fa-palette mr-1 text-purple-600"></i> 艺术熏陶</td>
+                            <td class="px-4 py-3">上海当代艺术博物馆 (苗江路678号)</td>
+                            <td class="px-4 py-3">地铁8号线 <i class="fas fa-arrow-right mx-1"></i> 中华艺术宫站, 步行约10分钟, 门票约60元</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">18:30 - 19:30</td>
+                            <td class="px-4 py-3"><i class="fas fa-utensils mr-1 text-red-600"></i> 晚餐</td>
+                            <td class="px-4 py-3">光明邨大酒家 (淮海中路588号) 或周边</td>
+                            <td class="px-4 py-3">本帮菜, 地铁1号线可达</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">19:30 - 20:30</td>
+                            <td class="px-4 py-3"><i class="fas fa-mug-hot mr-1 text-teal-600"></i> 夜景咖啡</td>
+                            <td class="px-4 py-3">看得到风景的咖啡馆 (东大名路501号)</td>
+                            <td class="px-4 py-3">地铁10号线南京东路 <i class="fas fa-arrow-right mx-1"></i> 天潼路, 步行约10分钟, 江景</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">20:30 - 21:00</td>
+                            <td class="px-4 py-3"><i class="fas fa-subway mr-1 text-yellow-600"></i> 地铁2号线</td>
+                            <td class="px-4 py-3">南京东路站 <i class="fas fa-arrow-right mx-1"></i> 上海虹桥站</td>
+                            <td class="px-4 py-3">约40分钟, 准备返程</td>
+                        </tr>
+                         <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">21:00 (预估)</td>
+                            <td class="px-4 py-3"><i class="fas fa-train mr-1 text-green-600"></i> 乘坐高铁 G99</td>
+                            <td class="px-4 py-3">上海虹桥站 <i class="fas fa-arrow-right mx-1"></i> 深圳北站</td>
+                            <td class="px-4 py-3">约9小时44分, 次日06:44抵达</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <div class="page-break-before"></div>
+
+        <section class="mb-6 section-card bg-white p-4 rounded-lg shadow animate-on-scroll">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-3"><i class="fas fa-bus-alt mr-2 text-lime-500"></i>主要交通信息</h2>
+            <div class="space-y-3">
+                <div>
+                    <h3 class="text-lg font-medium text-gray-800"><i class="fas fa-train mr-1"></i> 高铁 (深圳 <i class="fas fa-exchange-alt mx-1"></i> 上海)</h3>
+                    <p class="text-gray-600 ml-5">去程: G100 (07:59深圳北 <i class="fas fa-arrow-right mx-1"></i> 15:43上海虹桥)</p>
+                    <p class="text-gray-600 ml-5">回程: G99 (21:00上海虹桥 <i class="fas fa-arrow-right mx-1"></i> 06:44+1深圳北)</p>
+                    <p class="text-gray-600 ml-5">票价参考 (二等座单程): 约 869元</p>
+                    <p class="text-gray-600 ml-5">购票: 12306官网/APP, 携程等平台。暑期建议尽早购票。</p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium text-gray-800"><i class="fas fa-subway mr-1"></i> 上海市内交通</h3>
+                    <p class="text-gray-600 ml-5">主要依赖地铁，高效便捷。建议使用“Metro大都会”APP或支付宝/微信乘车码。</p>
+                    <p class="text-gray-600 ml-5"><strong>高德地图路线模拟 (概览):</strong></p>
+                    <ul class="list-decimal list-inside ml-8 text-gray-600">
+                        <li>虹桥站 <i class="fas fa-arrow-right mx-1"></i> 人民广场 (地铁2号线)</li>
+                        <li>人民广场 <i class="fas fa-arrow-right mx-1"></i> 人民咖啡馆 (步行/地铁8号线)</li>
+                        <li>人民咖啡馆 <i class="fas fa-arrow-right mx-1"></i> 当代艺术博物馆 (地铁8号线)</li>
+                        <li>艺术馆 <i class="fas fa-arrow-right mx-1"></i> 晚餐地点 (如光明邨: 地铁1号线)</li>
+                        <li>晚餐地点 <i class="fas fa-arrow-right mx-1"></i> 看得到风景的咖啡馆 (地铁10号线)</li>
+                        <li>咖啡馆 <i class="fas fa-arrow-right mx-1"></i> 虹桥站 (地铁2号线)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-6 section-card bg-white p-4 rounded-lg shadow animate-on-scroll">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-3"><i class="fas fa-concierge-bell mr-2 text-amber-500"></i>住宿与餐饮</h2>
+            <div>
+                <h3 class="text-lg font-medium text-gray-800"><i class="fas fa-bed mr-1"></i> 住宿</h3>
+                <p class="text-gray-600 ml-5">本次为当日往返行程，主要住宿在夜间高铁上。若行程变更或需额外住宿，可选择靠近地铁站的连锁酒店，如全季、汉庭等，注重舒适度和性价比。</p>
+            </div>
+            <div class="mt-4">
+                <h3 class="text-lg font-medium text-gray-800"><i class="fas fa-utensils mr-1"></i> 餐饮偏好</h3>
+                <p class="text-gray-600 ml-5">以当地特色菜和面点小吃为主，口味清淡。</p>
+                <p class="text-gray-600 ml-5"><strong>推荐尝试 (根据行程):</strong></p>
+                <ul class="list-disc list-inside ml-8 text-gray-600">
+                    <li><strong>人民咖啡馆:</strong> 精品咖啡、简餐</li>
+                    <li><strong>光明邨大酒家:</strong> 本帮菜 (红烧肉、蟹粉小笼等)</li>
+                    <li><strong>看得到风景的咖啡馆:</strong> 咖啡、小食</li>
+                    <li><strong>其他小红书推荐:</strong> 可根据实时位置和偏好搜索附近美食，如面馆、小吃店。</li>
+                </ul>
+                 <p class="text-gray-600 ml-5 mt-2"><strong>小红书搜集建议:</strong></p>
+                 <ul class="list-disc list-inside ml-8 text-gray-600">
+                    <li>关键词: "上海咖啡探店", "上海本帮菜", "陆家嘴美食", "人民广场美食"</li>
+                    <li>参考链接 (示例): 
+                        <a href="#" class="text-blue-500 hover:underline">小红书 - 上海咖啡攻略 (示例链接)</a>, 
+                        <a href="#" class="text-blue-500 hover:underline">小红书 - 上海美食日记 (示例链接)</a>
+                        (请替换为真实链接)
+                    </li>
+                 </ul>
+            </div>
+        </section>
+        
+        <div class="page-break-before"></div>
+
+        <section class="mb-6 section-card bg-white p-4 rounded-lg shadow animate-on-scroll">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-3"><i class="fas fa-chart-pie mr-2 text-pink-500"></i>预算摘要 (单人参考)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <ul class="text-gray-700 space-y-1">
+                        <li><i class="fas fa-train text-green-500 mr-2"></i>高铁往返: 约 1738 元</li>
+                        <li><i class="fas fa-subway text-yellow-500 mr-2"></i>市内交通: 约 20 元</li>
+                        <li><i class="fas fa-coffee text-orange-500 mr-2"></i>咖啡馆 (2家): 约 110 元</li>
+                        <li><i class="fas fa-ticket-alt text-purple-500 mr-2"></i>艺术馆门票: 约 60 元</li>
+                        <li><i class="fas fa-utensils text-red-500 mr-2"></i>晚餐: 约 150 元</li>
+                        <li class="font-bold mt-2"><i class="fas fa-coins text-yellow-400 mr-2"></i>预计总计: 约 2078 元</li>
+                    </ul>
+                </div>
+                <div class="flex items-center justify-center">
+                     <canvas id="budgetChart" class="max-w-xs max-h-64"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="section-card bg-white p-4 rounded-lg shadow animate-on-scroll">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-3"><i class="fas fa-info-circle mr-2 text-sky-500"></i>实用信息与提示</h2>
+            <div class="space-y-2 text-gray-700">
+                <p><i class="fas fa-lightbulb text-yellow-500 mr-2"></i><strong>轻松游玩Tips:</strong></p>
+                <ul class="list-disc list-inside ml-6">
+                    <li>高铁票务: 暑期高峰，务必提前购票，特别是夜间卧铺（若选择）。</li>
+                    <li>夜间高铁: G99为夜间座位高铁，注意休息。</li>
+                    <li>市内交通: 全程地铁，避免堵车，节省时间。下载“Metro大都会”APP。</li>
+                    <li>游玩节奏: 每个点预留约1小时，轻松不赶场。</li>
+                    <li>天气: 上海夏季炎热，注意防暑降温，携带雨具以防阵雨。</li>
+                    <li>支付: 移动支付普及，准备好支付宝/微信支付。</li>
+                    <li>行李: 轻装简行，可考虑在虹桥站寄存大件行李（如有）。</li>
+                </ul>
+                <p class="mt-3"><i class="fas fa-phone-alt text-red-500 mr-2"></i><strong>重要电话:</strong></p>
+                <ul class="list-disc list-inside ml-6">
+                    <li>旅游咨询: 021-12301 (或 当地旅游热线)</li>
+                    <li>紧急求助: 110 (警察), 120 (急救), 119 (火警)</li>
+                    <li>上海地铁服务热线: 021-64370000</li>
+                </ul>
+                 <p class="mt-3"><i class="fas fa-suitcase-rolling text-blue-500 mr-2"></i><strong>简易行李清单提醒:</strong></p>
+                <ul class="list-disc list-inside ml-6">
+                    <li>身份证、少量现金、信用卡</li>
+                    <li>手机、充电器、充电宝</li>
+                    <li>舒适的鞋子、换洗衣物 (若有需要)</li>
+                    <li>雨伞、防晒霜、个人药品</li>
+                    <li>相机/手机 (记录美好瞬间)</li>
+                </ul>
+            </div>
+        </section>
+
+        <footer class="mt-8 pt-4 border-t border-gray-300 text-center text-xs text-gray-500 animate-on-scroll">
+            <p>祝您旅途愉快！ Safe Travels!</p>
+            <p>规划表生成时间: <span id="generationTime"></span></p>
+        </footer>
+
+    </div>
+
+    <script>
+        document.getElementById('printBtn').addEventListener('click', function() {
+            window.print();
+        });
+
+        document.getElementById('generationTime').textContent = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        // Intersection Observer for animations
+        const animatedElements = document.querySelectorAll('.animate-on-scroll');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    // Optional: unobserve after animation
+                    // observer.unobserve(entry.target); 
+                } else {
+                    // Optional: remove class if you want animation to re-trigger on scroll up
+                    // entry.target.classList.remove('is-visible');
+                }
+            });
+        }, {
+            threshold: 0.1 // Trigger when 10% of the element is visible
+        });
+
+        animatedElements.forEach(el => {
+            observer.observe(el);
+        });
+        
+        // Staggered animation for grid items (if any, example)
+        // document.querySelectorAll('.grid .animate-on-scroll').forEach((item, index) => {
+        //    item.style.transitionDelay = `${index * 0.1}s`;
+        // });
+
+
+        // Budget Chart
+        const ctx = document.getElementById('budgetChart').getContext('2d');
+        const budgetChart = new Chart(ctx, {
+            type: 'pie', // or 'doughnut'
+            data: {
+                labels: ['高铁往返', '市内交通', '咖啡馆', '艺术馆门票', '晚餐'],
+                datasets: [{
+                    label: '预算占比',
+                    data: [1738, 20, 110, 60, 150], // Values from the budget summary
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.8)', // Blue
+                        'rgba(255, 206, 86, 0.8)', // Yellow
+                        'rgba(255, 159, 64, 0.8)', // Orange
+                        'rgba(153, 102, 255, 0.8)',// Purple
+                        'rgba(255, 99, 132, 0.8)'  // Red
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false, // Important for fitting in smaller containers
+                plugins: {
+                    legend: {
+                        position: 'top', // or 'bottom', 'left', 'right'
+                        labels: {
+                            font: {
+                                size: 10 // Adjust font size for legend
+                            }
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: '费用构成',
+                        font: {
+                           size: 14
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed !== null) {
+                                    label += new Intl.NumberFormat('zh-CN', { style: 'currency', currency: 'CNY' }).format(context.parsed);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
